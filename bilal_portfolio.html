@@ -2944,194 +2944,305 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-
-    const filterButtons = document.querySelectorAll('[data-filter]');
-    const projectItems = document.querySelectorAll('.project-item');
-    
-    filterButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Update active state
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            const filterValue = this.getAttribute('data-filter');
-            
-            projectItems.forEach(item => {
-                if (filterValue === 'all' || item.getAttribute('data-category') === filterValue) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
-    
-    // Initialize GLightbox for project images
-    GLightbox({
-        selector: '.project-img-container img',
-        touchNavigation: true,
-        loop: true
-    });
-
-
-
-
-
-
             // Initialize AOS animation
             AOS.init({
                 duration: 800,
                 easing: 'ease-in-out',
                 once: true,
-                offset: 100
+                offset: 100,
+                disable: window.innerWidth < 768
             });
+
+            // Initialize Splide carousels
+            if (typeof Splide !== 'undefined') {
+                new Splide('#presentationsCarousel', {
+                    type: 'loop',
+                    perPage: 3,
+                    perMove: 1,
+                    gap: '1rem',
+                    pagination: false,
+                    breakpoints: {
+                        992: { perPage: 2 },
+                        768: { perPage: 1 }
+                    }
+                }).mount();
+
+                new Splide('#testimonialsCarousel', {
+                    type: 'loop',
+                    perPage: 2,
+                    perMove: 1,
+                    gap: '1rem',
+                    pagination: false,
+                    breakpoints: {
+                        768: { perPage: 1 }
+                    }
+                }).mount();
+            }
+
+            // Initialize GLightbox
+            if (typeof GLightbox !== 'undefined') {
+                GLightbox({
+                    selector: '.glightbox',
+                    touchNavigation: true,
+                    loop: true,
+                    openEffect: 'zoom',
+                    closeEffect: 'zoom'
+                });
+            }
 
             // Navbar scroll effect
             const navbar = document.querySelector('.navbar');
-            window.addEventListener('scroll', function() {
-                if (window.scrollY > 100) {
-                    navbar.classList.add('scrolled');
-                } else {
-                    navbar.classList.remove('scrolled');
-                }
-            });
+            if (navbar) {
+                window.addEventListener('scroll', function() {
+                    if (window.scrollY > 100) {
+                        navbar.classList.add('scrolled');
+                    } else {
+                        navbar.classList.remove('scrolled');
+                    }
+                });
+            }
 
             // Back to top button
             const backToTop = document.getElementById('backToTop');
-            window.addEventListener('scroll', function() {
-                if (window.pageYOffset > 300) {
-                    backToTop.classList.add('show');
-                } else {
-                    backToTop.classList.remove('show');
-                }
-            });
-
-            backToTop.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
+            if (backToTop) {
+                window.addEventListener('scroll', function() {
+                    if (window.pageYOffset > 300) {
+                        backToTop.classList.add('show');
+                    } else {
+                        backToTop.classList.remove('show');
+                    }
                 });
-            });
+
+                backToTop.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+            }
 
             // Dark mode toggle
             const darkModeToggle = document.getElementById('darkModeToggle');
-            darkModeToggle.addEventListener('click', function() {
-                document.body.classList.toggle('dark-mode');
-                const icon = darkModeToggle.querySelector('i');
-                if (document.body.classList.contains('dark-mode')) {
-                    icon.classList.remove('fa-moon');
-                    icon.classList.add('fa-sun');
-                } else {
-                    icon.classList.remove('fa-sun');
-                    icon.classList.add('fa-moon');
+            if (darkModeToggle) {
+                // Check for saved user preference
+                if (localStorage.getItem('darkMode') === 'enabled') {
+                    document.body.classList.add('dark-mode');
+                    updateDarkModeIcon(true);
                 }
-            });
+
+                darkModeToggle.addEventListener('click', function() {
+                    document.body.classList.toggle('dark-mode');
+                    const isDarkMode = document.body.classList.contains('dark-mode');
+                    localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
+                    updateDarkModeIcon(isDarkMode);
+                });
+
+                function updateDarkModeIcon(isDarkMode) {
+                    const icon = darkModeToggle.querySelector('i');
+                    if (isDarkMode) {
+                        icon.classList.replace('fa-moon', 'fa-sun');
+                    } else {
+                        icon.classList.replace('fa-sun', 'fa-moon');
+                    }
+                }
+            }
 
             // Smooth scrolling for navigation
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function(e) {
                     e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
+                    const targetId = this.getAttribute('href');
+                    const target = document.querySelector(targetId);
+                    
                     if (target) {
+                        // Close mobile menu if open
+                        const navbarCollapse = document.querySelector('.navbar-collapse');
+                        if (navbarCollapse && navbarCollapse.classList.contains('show')) {
+                            const toggler = document.querySelector('.navbar-toggler');
+                            if (toggler) toggler.click();
+                        }
+
                         window.scrollTo({
                             top: target.offsetTop - 80,
                             behavior: 'smooth'
                         });
+
+                        // Update URL without page jump
+                        if (history.pushState) {
+                            history.pushState(null, null, targetId);
+                        } else {
+                            window.location.hash = targetId;
+                        }
                     }
                 });
             });
 
-            // Form submission
+            // Project filtering
+            const filterButtons = document.querySelectorAll('[data-filter]');
+            const projectItems = document.querySelectorAll('.project-item');
+            
+            if (filterButtons.length && projectItems.length) {
+                filterButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        // Update active state
+                        filterButtons.forEach(btn => btn.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const filterValue = this.getAttribute('data-filter');
+                        
+                        projectItems.forEach(item => {
+                            if (filterValue === 'all' || item.getAttribute('data-category') === filterValue) {
+                                item.style.display = 'block';
+                                item.setAttribute('aria-hidden', 'false');
+                            } else {
+                                item.style.display = 'none';
+                                item.setAttribute('aria-hidden', 'true');
+                            }
+                        });
+                    });
+                });
+            }
+
+            // Form submission with validation
             const contactForm = document.getElementById('contactForm');
             if (contactForm) {
                 contactForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    // Here you would typically send the form data to a server
-                    alert('Thank you for your message! I will get back to you soon.');
+                    
+                    // Form validation
+                    const name = document.getElementById('name');
+                    const email = document.getElementById('email');
+                    const subject = document.getElementById('subject');
+                    const message = document.getElementById('message');
+                    const consent = document.getElementById('consent');
+                    
+                    let isValid = true;
+                    
+                    // Reset error states
+                    [name, email, subject, message].forEach(field => {
+                        field.classList.remove('is-invalid');
+                    });
+                    
+                    // Validate fields
+                    if (!name.value.trim()) {
+                        name.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                    
+                    if (!email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+                        email.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                    
+                    if (!subject.value.trim()) {
+                        subject.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                    
+                    if (!message.value.trim()) {
+                        message.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                    
+                    if (!consent.checked) {
+                        consent.classList.add('is-invalid');
+                        isValid = false;
+                    }
+                    
+                    if (!isValid) {
+                        return;
+                    }
+                    
+                    // Form data
+                    const formData = new FormData(contactForm);
+                    
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success mt-3';
+                    alertDiv.setAttribute('role', 'alert');
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-check-circle me-2"></i>
+                        Thank you for your message! I will get back to you soon.
+                    `;
+                    
+                    const formActions = contactForm.querySelector('.form-actions');
+                    if (formActions) {
+                        formActions.before(alertDiv);
+                    } else {
+                        contactForm.appendChild(alertDiv);
+                    }
+                    
+                    // Reset form
                     contactForm.reset();
+                    
+                    // Remove alert after 5 seconds
+                    setTimeout(() => {
+                        alertDiv.remove();
+                    }, 5000);
                 });
             }
 
-            // View more/less functionality for publications
-    const viewMoreButtons = document.querySelectorAll('[data-bs-toggle="collapse"]');
-    
-    viewMoreButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const isExpanded = this.getAttribute('aria-expanded') === 'true';
-            const viewMoreText = this.querySelector('.view-more-text');
-            const viewLessText = this.querySelector('.view-less-text');
-            
-            if (isExpanded) {
-                viewMoreText.classList.remove('d-none');
-                viewLessText.classList.add('d-none');
-                this.querySelector('i').classList.replace('fa-chevron-up', 'fa-chevron-down');
-            } else {
-                viewMoreText.classList.add('d-none');
-                viewLessText.classList.remove('d-none');
-                this.querySelector('i').classList.replace('fa-chevron-down', 'fa-chevron-up');
+            // Initialize skills radar chart
+            const radarCtx = document.getElementById('skillsRadarChart');
+            if (radarCtx && typeof Chart !== 'undefined') {
+                new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Pen Testing', 'Security Compliance', 'AI Security', 'Forensics', 'Network Security', 'Secure Coding'],
+                        datasets: [{
+                            label: 'Skill Level',
+                            data: [95, 90, 85, 80, 85, 90],
+                            backgroundColor: 'rgba(139, 0, 0, 0.2)',
+                            borderColor: 'rgba(139, 0, 0, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(139, 0, 0, 1)',
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: {
+                                    color: 'rgba(139, 0, 0, 0.1)'
+                                },
+                                grid: {
+                                    color: 'rgba(139, 0, 0, 0.1)'
+                                },
+                                suggestedMin: 50,
+                                suggestedMax: 100,
+                                pointLabels: {
+                                    font: {
+                                        family: 'Inter',
+                                        size: 12
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw}%`;
+                                    }
+                                }
+                            }
+                        },
+                        elements: {
+                            line: {
+                                tension: 0.1
+                            }
+                        }
+                    }
+                });
             }
-        });
-    });
 
-            // Initialize Splide carousels
-            new Splide('#skillsCarousel', {
-                type: 'loop',
-                perPage: 3,
-                perMove: 1,
-                gap: '1rem',
-                pagination: false,
-                breakpoints: {
-                    992: {
-                        perPage: 2
-                    },
-                    768: {
-                        perPage: 1
-                    }
-                }
-            }).mount();
-
-            new Splide('#presentationsCarousel', {
-                type: 'loop',
-                perPage: 3,
-                perMove: 1,
-                gap: '1rem',
-                pagination: false,
-                breakpoints: {
-                    992: {
-                        perPage: 2
-                    },
-                    768: {
-                        perPage: 1
-                    }
-                }
-            }).mount();
-
-            new Splide('#testimonialsCarousel', {
-                type: 'loop',
-                perPage: 2,
-                perMove: 1,
-                gap: '1rem',
-                pagination: false,
-                breakpoints: {
-                    768: {
-                        perPage: 1
-                    }
-                }
-            }).mount();
-
-            // Initialize GLightbox
-            GLightbox({
-                selector: '.glightbox'
-            });
-
-            // Matrix Rain Effect
+            // Matrix Rain Effect for Hero Section
             const matrixCanvas = document.getElementById('matrixRain');
             if (matrixCanvas) {
                 matrixCanvas.width = matrixCanvas.offsetWidth;
@@ -3151,7 +3262,7 @@
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
                     ctx.fillRect(0, 0, w, h);
                     
-                    ctx.fillStyle = 'rgba(128, 0, 0, 0.5)';
+                    ctx.fillStyle = 'rgba(139, 0, 0, 0.5)';
                     ctx.font = '15pt "Fira Code", monospace';
                     
                     ypos.forEach((y, ind) => {
@@ -3167,59 +3278,22 @@
                     });
                 }
                 
-                setInterval(matrix, 50);
-            }
-
-            // Skills Radar Chart
-            const radarCtx = document.getElementById('skillsRadarChart');
-            if (radarCtx) {
-                const radarChart = new Chart(radarCtx, {
-                    type: 'radar',
-                    data: {
-                        labels: ['Pen Testing', 'Security Compliance', 'AI Security', 'Forensics', 'Network Security', 'Secure Coding'],
-                        datasets: [{
-                            label: 'Skill Level',
-                            data: [95, 90, 85, 80, 85, 90],
-                            backgroundColor: 'rgba(128, 0, 0, 0.2)',
-                            borderColor: 'rgba(128, 0, 0, 1)',
-                            borderWidth: 2,
-                            pointBackgroundColor: 'rgba(128, 0, 0, 1)',
-                            pointRadius: 4
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            r: {
-                                angleLines: {
-                                    color: 'rgba(128, 0, 0, 0.1)'
-                                },
-                                grid: {
-                                    color: 'rgba(128, 0, 0, 0.1)'
-                                },
-                                suggestedMin: 50,
-                                suggestedMax: 100,
-                                pointLabels: {
-                                    font: {
-                                        family: 'Inter',
-                                        size: 12
-                                    }
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        elements: {
-                            line: {
-                                tension: 0.1
-                            }
+                const matrixInterval = setInterval(matrix, 50);
+                
+                // Cleanup on section leave
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) {
+                            clearInterval(matrixInterval);
+                            observer.unobserve(entry.target);
                         }
-                    }
-                });
+                    });
+                }, { threshold: 0.1 });
+                
+                observer.observe(matrixCanvas);
             }
         });
     </script>
 </body>
 </html>
+
